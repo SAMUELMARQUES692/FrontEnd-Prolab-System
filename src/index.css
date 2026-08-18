@@ -1,0 +1,136 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* ---- Palette (Arboria-derived, extended for a dense admin UI) ---- */
+  --color-base: #454640;
+  --color-base-soft: #5f615e;
+  --color-canvas: #37382f;
+  --color-canvas-2: #33342c;
+  --color-surface: #4d4e46;
+  --color-surface-2: #575850;
+  --color-surface-hover: #565750;
+  --color-border: rgba(255, 255, 255, 0.09);
+  --color-border-strong: rgba(255, 255, 255, 0.18);
+
+  --color-muted: #b2b3a7;
+  --color-muted-2: #8c8d81;
+  --color-ink: #f6f6f2;
+
+  --color-card: #d7d8d6;
+  --color-card-ink: #474842;
+
+  --color-accent: #a3c17f;
+  --color-accent-strong: #86a763;
+  --color-accent-soft: #2f3a26;
+  --color-accent-ink: #223018;
+
+  --color-success: #92c17c;
+  --color-success-soft: #263124;
+  --color-warning: #dab86a;
+  --color-warning-soft: #3a3122;
+  --color-danger: #d68471;
+  --color-danger-soft: #3a2621;
+  --color-info: #85adc9;
+  --color-info-soft: #23303a;
+
+  /* ---- Type ---- */
+  --font-sans: "Lexend", ui-sans-serif, sans-serif;
+  --font-display: "Lexend Exa", ui-sans-serif, sans-serif;
+  --font-serif: "Rozha One", serif;
+
+  /* ---- Radii ---- */
+  --radius-pill: 999px;
+  --radius-xl: 28px;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+
+  /* ---- Shadows ---- */
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.18), 0 12px 32px -16px rgba(0, 0, 0, 0.45);
+  --shadow-lift: 0 20px 60px -20px rgba(0, 0, 0, 0.55);
+
+  --animate-fade-up: fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-scale-in: scale-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+  background-clip: padding-box;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+input, textarea, select, button {
+  font-family: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
