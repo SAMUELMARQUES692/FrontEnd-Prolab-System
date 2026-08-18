@@ -4,6 +4,26 @@ Interface web para o ecossistema Prolab: autenticação (`auth-service`), domín
 
 Design baseado no design system **Arboria** fornecido como referência (paleta oliva/musgo escura, tipografia Lexend / Lexend Exa / Rozha One, botões em pílula, cards arredondados, motion sutil).
 
+## 🔗 Deploy em produção
+
+| Serviço | URL | Observação |
+|---|---|---|
+| Frontend | https://front-end-prolab-system.vercel.app | React + Vite, hospedado na Vercel |
+| Auth Service | https://auth-service-xa2p.onrender.com | Gera e valida tokens JWT |
+| Prolab System | https://prolabsystem.onrender.com | API de negócio, valida tokens via chave pública |
+| Message Service | https://message-service-mp5h.onrender.com | Worker assíncrono, sem endpoints públicos |
+
+> Os backends rodam no plano gratuito do Render e "dormem" após inatividade — a primeira requisição pode demorar até 1 minuto (cold start).
+
+**Infraestrutura:**
+- Banco de dados: PostgreSQL único no Render, com schemas isolados por serviço
+- Mensageria: RabbitMQ hospedado no CloudAMQP
+- Deploy: Docker (Render) + Vercel
+
+## CORS
+
+Em produção, o CORS está restrito ao domínio do frontend: `https://front-end-prolab-system.vercel.app`. Para desenvolvimento local, ajuste `CorsConfig.java` ou use `addAllowedOriginPattern("*")` temporariamente.
+
 ## Stack
 
 - React 19 + TypeScript + Vite
@@ -22,14 +42,14 @@ cp .env.example .env   # ajuste as URLs se os serviços não estiverem em localh
 npm run dev
 ```
 
-Por padrão a aplicação espera:
+Por padrão, em desenvolvimento local, a aplicação espera:
 
-| Variável | Padrão | Serviço |
+| Variável | Padrão (local) | Serviço |
 |---|---|---|
 | `VITE_AUTH_API_URL` | `http://localhost:8081` | auth-service |
 | `VITE_PROLAB_API_URL` | `http://localhost:8080` | ProlabSystem |
 
-Os três serviços do backend (auth-service, ProlabSystem, message-service) precisam estar no ar — veja os READMEs de cada repositório para as variáveis de ambiente deles (banco Postgres, chaves RSA, RabbitMQ).
+> Em produção, essas variáveis já estão configuradas na Vercel apontando para as URLs reais do Render (ver seção "Deploy em produção" acima).
 
 ## Estrutura
 
@@ -71,26 +91,19 @@ npm run build   # tsc -b && vite build
 npm run preview
 ```
 
-## Deploy (Vercel)
+## Como replicar o deploy
 
-Este projeto já está pronto para deploy direto na Vercel (`vercel.json` define
-`framework: vite`, `outputDirectory: dist` e o rewrite de SPA para o React Router).
+O projeto já está publicado (ver seção "Deploy em produção" acima). Para fazer seu próprio deploy a partir de um fork:
 
-1. **Suba esta pasta (`frontend/`) para um repositório git** (GitHub/GitLab/Bitbucket) —
-   pode ser um repo próprio, separado de `ProlabSystem` e `auth-service`, do mesmo
-   jeito que os outros serviços do backend.
-2. Na Vercel: **Add New Project** → importe esse repositório. A Vercel detecta o
-   framework Vite automaticamente (o `vercel.json` já reforça isso).
-3. Em **Project Settings → Environment Variables**, cadastre, para os ambientes
-   `Production` (e `Preview`, se quiser testar branches):
-   - `VITE_AUTH_API_URL` → URL pública do `auth-service` no Render
-     (ex.: `https://prolab-auth-service.onrender.com`)
-   - `VITE_PROLAB_API_URL` → URL pública do `ProlabSystem` no Render
-     (ex.: `https://prolab-system.onrender.com`)
+1. Importa o repositório na Vercel (**Add New Project**) — o framework Vite é detectado automaticamente via `vercel.json` (`framework: vite`, `outputDirectory: dist`, rewrite de SPA para o React Router).
+2. Em **Project Settings → Environment Variables**, cadastra as duas variáveis para os ambientes `Production` e `Preview`:
+   - `VITE_AUTH_API_URL` — URL pública do seu `auth-service`
+   - `VITE_PROLAB_API_URL` — URL pública do seu `ProlabSystem`
 
-   Veja `.env.production.example` como referência dos nomes das variáveis.
-4. Deploy. Toda alteração de código nesta pasta (`git push`) dispara um novo
-   deploy automático na Vercel.
+   Referência dos nomes em `.env.production.example`.
+3. Deploy. Cada `git push` dispara um novo deploy automático.
+
+> Lembra de liberar o domínio da Vercel no CORS dos dois backends (`CorsConfig.java`), senão o navegador bloqueia as chamadas mesmo com os serviços no ar.
 
 ### CORS no backend
 
