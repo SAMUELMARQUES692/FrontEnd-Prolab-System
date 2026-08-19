@@ -6,7 +6,7 @@ const AUTH_BASE_URL = import.meta.env.VITE_AUTH_API_URL ?? "http://localhost:808
 const CORE_BASE_URL = import.meta.env.VITE_PROLAB_API_URL ?? "http://localhost:8080";
 
 function createClient(baseURL: string) {
-  const client = axios.create({ baseURL, timeout: 20000 });
+  const client = axios.create({ baseURL, timeout: 60000 });
 
   client.interceptors.request.use((config) => {
     const token = getStoredToken();
