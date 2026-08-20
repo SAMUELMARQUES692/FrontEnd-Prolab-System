@@ -86,6 +86,16 @@ export function IconPosicao(props: SVGProps) {
   );
 }
 
+export function IconPalete(props: SVGProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3 8.5h18M3 12h18M3 15.5h18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M5.5 8.5V20M11.5 8.5V20M18.5 8.5V20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <rect x="3.5" y="4" width="17" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
 export function IconDocumento(props: SVGProps) {
   return (
     <svg {...base} {...props}>

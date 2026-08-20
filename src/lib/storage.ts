@@ -1,11 +1,13 @@
 // A API do ProlabSystem não expõe endpoints de listagem para Recebimento
-// (só POST/PUT/DELETE) nem para DocumentoCliente (só POST/PUT/DELETE/GET-by-id).
-// Para dar uma experiência utilizável mesmo assim, guardamos localmente um
-// histórico dos registros criados/vistos nesta máquina. É só um atalho de UX —
-// nunca a fonte da verdade — por isso cada tela deixa isso explícito.
+// (só POST/PUT/DELETE), para DocumentoCliente (só POST/PUT/DELETE/GET-by-id)
+// nem para Palete (só POST). Para dar uma experiência utilizável mesmo assim,
+// guardamos localmente um histórico dos registros criados/vistos nesta
+// máquina. É só um atalho de UX — nunca a fonte da verdade — por isso cada
+// tela deixa isso explícito.
 
 const RECEBIMENTOS_KEY = "prolab:recebimentos-recentes";
 const DOCUMENTOS_KEY = "prolab:documentos-recentes";
+const PALETES_KEY = "prolab:paletes-recentes";
 
 export interface RecebimentoLocal {
   id: number;
@@ -16,6 +18,17 @@ export interface RecebimentoLocal {
   dataHoraRecebimento: string;
   pesoConferido: number | null;
   observacoes: string | null;
+  createdAt: string;
+}
+
+export interface PaleteLocal {
+  id: number;
+  ticket: string;
+  recebimentoId: number;
+  numeroPalete: number;
+  tipo: string;
+  peso: number;
+  estadoFisico: string;
   createdAt: string;
 }
 
@@ -62,6 +75,16 @@ export function removeRecebimentoLocal(id: number) {
     RECEBIMENTOS_KEY,
     readList<RecebimentoLocal>(RECEBIMENTOS_KEY).filter((r) => r.id !== id)
   );
+}
+
+export function getPaletesLocais(): PaleteLocal[] {
+  return readList<PaleteLocal>(PALETES_KEY).sort((a, b) => b.id - a.id);
+}
+
+export function upsertPaleteLocal(item: PaleteLocal) {
+  const list = readList<PaleteLocal>(PALETES_KEY).filter((p) => p.id !== item.id);
+  list.push(item);
+  writeList(PALETES_KEY, list);
 }
 
 export function getDocumentosLocais(): DocumentoLocal[] {

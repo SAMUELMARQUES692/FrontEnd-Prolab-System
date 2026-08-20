@@ -6,9 +6,10 @@ import { IconButton } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { CopyableCode } from "@/components/ui/CopyableCode";
-import { IconAlert, IconEdit, IconRecebimento, IconTrash } from "@/components/icons";
+import { IconAlert, IconEdit, IconPalete, IconRecebimento, IconTrash } from "@/components/icons";
 import { useRecebimentosLocais, useDeletarRecebimento } from "./useRecebimentos";
 import { RecebimentoFormDrawer } from "./RecebimentoFormDrawer";
+import { PaleteFormDrawer } from "@/features/paletes/PaleteFormDrawer";
 import { useClientes } from "@/features/clientes/useClientes";
 import { useCaminhoes } from "@/features/caminhoes/useCaminhoes";
 import { formatDateTime, formatNumber } from "@/lib/format";
@@ -29,6 +30,7 @@ export function RecebimentosPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<RecebimentoLocal | null>(null);
   const [manualId, setManualId] = useState("");
+  const [paleteRecebimentoId, setPaleteRecebimentoId] = useState<number | null>(null);
 
   const clienteNome = useMemo(() => {
     const map = new Map((clientes ?? []).map((c) => [c.id, c.razaoSocial]));
@@ -54,6 +56,15 @@ export function RecebimentosPage() {
       render: (r) =>
         user?.isAdmin && (
           <div className="flex justify-end gap-1.5">
+            <IconButton
+              aria-label="Cadastrar palete"
+              variant="ghost"
+              size="sm"
+              title="Cadastrar palete para este recebimento"
+              onClick={() => setPaleteRecebimentoId(r.id)}
+            >
+              <IconPalete className="h-4 w-4" />
+            </IconButton>
             <IconButton
               aria-label="Editar"
               variant="ghost"
@@ -155,6 +166,15 @@ export function RecebimentosPage() {
         }}
         agendamentoId={editing ? undefined : manualId ? Number(manualId) : undefined}
         recebimentoLocal={editing}
+      />
+
+      <PaleteFormDrawer
+        open={paleteRecebimentoId !== null}
+        onClose={() => {
+          setPaleteRecebimentoId(null);
+          refresh();
+        }}
+        defaultRecebimentoId={paleteRecebimentoId ?? undefined}
       />
     </div>
   );

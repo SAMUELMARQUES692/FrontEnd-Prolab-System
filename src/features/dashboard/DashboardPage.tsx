@@ -19,6 +19,7 @@ import { useCaminhoes } from "@/features/caminhoes/useCaminhoes";
 import { useAgendamentos } from "@/features/agendamentos/useAgendamentos";
 import { useResiduosPorStatus } from "@/features/residuos/useResiduos";
 import { usePosicoes } from "@/features/posicoes/usePosicoes";
+import { usePaletesLocais } from "@/features/paletes/usePaletes";
 import { entries, STATUS_AGENDAMENTO, STATUS_POSICAO, STATUS_RESIDUO } from "@/lib/enums";
 import { formatDateTime, formatNumber } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
@@ -32,6 +33,11 @@ export function DashboardPage() {
   const { data: armazenados, isLoading: loadingArmazenados } = useResiduosPorStatus("ARMAZENADO");
   const { data: emTratamento } = useResiduosPorStatus("EM_TRATAMENTO");
   const { data: destruidos } = useResiduosPorStatus("DESTRUIDO");
+  const { items: paletes } = usePaletesLocais();
+
+  // Resíduo não carrega mais o peso — somamos via o espelho local de
+  // paletes desta máquina (ver features/paletes/usePaletes.ts).
+  const pesoPorPaleteId = useMemo(() => new Map(paletes.map((p) => [p.id, p.peso])), [paletes]);
 
   const clientesAtivos = clientes?.filter((c) => c.ativo).length ?? 0;
 
@@ -49,7 +55,7 @@ export function DashboardPage() {
     return counts;
   }, [posicoes]);
 
-  const pesoArmazenado = armazenados?.reduce((acc, r) => acc + r.quantidade, 0) ?? 0;
+  const pesoArmazenado = armazenados?.reduce((acc, r) => acc + (pesoPorPaleteId.get(r.paleteId) ?? 0), 0) ?? 0;
   const ocupacaoGeral = posicoes?.length
     ? (posicoesPorStatus.OCUPADA / posicoes.length) * 100
     : 0;
@@ -208,9 +214,9 @@ export function DashboardPage() {
           <CardHeader title="Resíduos por status" />
           <CardBody>
             <div className="flex flex-col gap-4">
-              <ResiduoStatusRow label={STATUS_RESIDUO.ARMAZENADO.label} tone="info" items={armazenados} />
-              <ResiduoStatusRow label={STATUS_RESIDUO.EM_TRATAMENTO.label} tone="warning" items={emTratamento} />
-              <ResiduoStatusRow label={STATUS_RESIDUO.DESTRUIDO.label} tone="success" items={destruidos} />
+              <ResiduoStatusRow label={STATUS_RESIDUO.ARMAZENADO.label} tone="info" items={armazenados} pesoPorPaleteId={pesoPorPaleteId} />
+              <ResiduoStatusRow label={STATUS_RESIDUO.EM_TRATAMENTO.label} tone="warning" items={emTratamento} pesoPorPaleteId={pesoPorPaleteId} />
+              <ResiduoStatusRow label={STATUS_RESIDUO.DESTRUIDO.label} tone="success" items={destruidos} pesoPorPaleteId={pesoPorPaleteId} />
             </div>
             <Link to="/residuos" className="mt-4 flex items-center gap-1 text-xs text-accent hover:underline">
               Gerenciar resíduos <IconArrowUpRight className="h-3 w-3" />
@@ -254,12 +260,14 @@ function ResiduoStatusRow({
   label,
   tone,
   items,
+  pesoPorPaleteId,
 }: {
   label: string;
   tone: "info" | "warning" | "success";
-  items?: { quantidade: number }[];
+  items?: { paleteId: number }[];
+  pesoPorPaleteId: Map<number, number>;
 }) {
-  const total = items?.reduce((acc, r) => acc + r.quantidade, 0) ?? 0;
+  const total = items?.reduce((acc, r) => acc + (pesoPorPaleteId.get(r.paleteId) ?? 0), 0) ?? 0;
   return (
     <div className="flex items-center justify-between rounded-lg border border-border bg-canvas-2/40 px-4 py-3">
       <div className="flex items-center gap-2">

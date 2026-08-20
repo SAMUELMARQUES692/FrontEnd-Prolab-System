@@ -8,6 +8,7 @@ import { ClientesPage } from "@/features/clientes/ClientesPage";
 import { CaminhoesPage } from "@/features/caminhoes/CaminhoesPage";
 import { AgendamentosPage } from "@/features/agendamentos/AgendamentosPage";
 import { RecebimentosPage } from "@/features/recebimentos/RecebimentosPage";
+import { PaletesPage } from "@/features/paletes/PaletesPage";
 import { ResiduosPage } from "@/features/residuos/ResiduosPage";
 import { PosicoesPage } from "@/features/posicoes/PosicoesPage";
 import { DocumentosPage } from "@/features/documentos/DocumentosPage";
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="/caminhoes" element={<CaminhoesPage />} />
           <Route path="/agendamentos" element={<AgendamentosPage />} />
           <Route path="/recebimentos" element={<RecebimentosPage />} />
+          <Route path="/paletes" element={<PaletesPage />} />
           <Route path="/residuos" element={<ResiduosPage />} />
           <Route path="/posicoes" element={<PosicoesPage />} />
           <Route path="/documentos" element={<DocumentosPage />} />

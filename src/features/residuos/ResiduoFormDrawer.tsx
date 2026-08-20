@@ -8,14 +8,15 @@ import { Input, Select } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useCadastrarResiduo, useAtualizarResiduo } from "./useResiduos";
 import { usePosicoes } from "@/features/posicoes/usePosicoes";
+import { usePaletesLocais } from "@/features/paletes/usePaletes";
+import { TIPO_RESIDUO } from "@/lib/enums";
+import { formatNumber } from "@/lib/format";
 import { useToast } from "@/context/ToastContext";
 import { toApiError } from "@/api/http";
 import type { ResiduoResponse } from "@/types/domain";
 
 const schema = z.object({
-  recebimentoId: z.coerce.number({ error: "Informe o ID do recebimento" }).positive("Informe um ID válido"),
-  tipoResiduo: z.string().min(1, "Informe o tipo de resíduo"),
-  quantidade: z.coerce.number({ error: "Informe a quantidade" }).positive("Deve ser maior que zero"),
+  paleteId: z.coerce.number({ error: "Selecione o palete" }).positive("Selecione o palete"),
   posicaoId: z.coerce.number({ error: "Selecione a posição" }).positive("Selecione a posição"),
   mtrVinculado: z.string().optional(),
 });
@@ -26,15 +27,16 @@ export function ResiduoFormDrawer({
   open,
   onClose,
   residuo,
-  defaultRecebimentoId,
+  defaultPaleteId,
 }: {
   open: boolean;
   onClose: () => void;
   residuo?: ResiduoResponse | null;
-  defaultRecebimentoId?: number;
+  defaultPaleteId?: number;
 }) {
   const toast = useToast();
   const { data: posicoes } = usePosicoes();
+  const { items: paletes } = usePaletesLocais();
   const cadastrar = useCadastrarResiduo();
   const atualizar = useAtualizarResiduo();
   const isEdit = !!residuo;
@@ -49,21 +51,17 @@ export function ResiduoFormDrawer({
   useEffect(() => {
     if (open) {
       reset({
-        recebimentoId: residuo?.recebimentoId ?? defaultRecebimentoId ?? 0,
-        tipoResiduo: residuo?.tipoResiduo ?? "",
-        quantidade: residuo?.quantidade ?? 0,
+        paleteId: residuo?.paleteId ?? defaultPaleteId ?? 0,
         posicaoId: residuo?.posicaoId ?? 0,
         mtrVinculado: residuo?.mtrVinculado ?? "",
       });
     }
-  }, [open, residuo, defaultRecebimentoId, reset]);
+  }, [open, residuo, defaultPaleteId, reset]);
 
   const onSubmit = async (values: FormOutput) => {
     try {
       const payload = {
-        recebimentoId: values.recebimentoId,
-        tipoResiduo: values.tipoResiduo,
-        quantidade: values.quantidade,
+        paleteId: values.paleteId,
         posicaoId: values.posicaoId,
         mtrVinculado: values.mtrVinculado || null,
       };
@@ -72,7 +70,7 @@ export function ResiduoFormDrawer({
         toast.success("Resíduo atualizado");
       } else {
         await cadastrar.mutateAsync(payload);
-        toast.success("Resíduo cadastrado", "Status inicial: Armazenado");
+        toast.success("Resíduo alocado", "Status inicial: Armazenado");
       }
       onClose();
     } catch (err) {
@@ -80,38 +78,47 @@ export function ResiduoFormDrawer({
     }
   };
 
+  const editingPaleteNaoListado = isEdit && residuo && !paletes.some((p) => p.id === residuo.paleteId);
+
   return (
     <Drawer
       open={open}
       onClose={onClose}
-      title={isEdit ? "Editar resíduo" : "Novo resíduo"}
-      subtitle={isEdit ? `#${residuo?.id}` : "Registrar item armazenado em estoque"}
+      title={isEdit ? "Editar resíduo" : "Alocar resíduo"}
+      subtitle={isEdit ? `#${residuo?.id}` : "Vincular um palete a uma posição de estoque"}
       footer={
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>
             Cancelar
           </Button>
           <Button form="residuo-form" type="submit" loading={isSubmitting}>
-            {isEdit ? "Salvar alterações" : "Cadastrar resíduo"}
+            {isEdit ? "Salvar alterações" : "Alocar resíduo"}
           </Button>
         </div>
       }
     >
       <form id="residuo-form" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <Field
-          label="ID do recebimento"
-          htmlFor="recebimentoId"
-          error={errors.recebimentoId?.message}
-          hint="Consulte o código PRIME na tela de Recebimentos para localizar o ID"
+          label="Palete"
+          htmlFor="paleteId"
+          error={errors.paleteId?.message}
+          hint={paletes.length === 0 ? "Nenhum palete cadastrado nesta máquina — cadastre um na tela de Paletes" : undefined}
           required
         >
-          <Input id="recebimentoId" type="number" min={1} {...register("recebimentoId")} />
-        </Field>
-        <Field label="Tipo de resíduo" htmlFor="tipoResiduo" error={errors.tipoResiduo?.message} required>
-          <Input id="tipoResiduo" placeholder="Ex.: Papel, plástico, eletrônico..." {...register("tipoResiduo")} />
-        </Field>
-        <Field label="Quantidade (kg)" htmlFor="quantidade" error={errors.quantidade?.message} required>
-          <Input id="quantidade" type="number" step="0.01" min={0} {...register("quantidade")} />
+          <Select id="paleteId" defaultValue="" {...register("paleteId")}>
+            <option value="" disabled>
+              Selecione o palete
+            </option>
+            {editingPaleteNaoListado && (
+              <option value={residuo!.paleteId}>Palete #{residuo!.paleteId} (não listado nesta máquina)</option>
+            )}
+            {paletes.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.ticket} · {TIPO_RESIDUO[p.tipo as keyof typeof TIPO_RESIDUO]?.codigo ?? p.tipo} ·{" "}
+                {formatNumber(p.peso, "kg")}
+              </option>
+            ))}
+          </Select>
         </Field>
         <Field label="Posição de estoque" htmlFor="posicaoId" error={errors.posicaoId?.message} required>
           <Select id="posicaoId" defaultValue="" {...register("posicaoId")}>

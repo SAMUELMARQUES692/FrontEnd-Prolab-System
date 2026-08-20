@@ -1,12 +1,12 @@
 import { coreHttp } from "./http";
-import type { ResiduoRequest, ResiduoResponse, StatusResiduo } from "@/types/domain";
+import type { ResiduoRequest, ResiduoResponse, StatusResiduo, TipoResiduo } from "@/types/domain";
 
 export const residuosApi = {
   buscarPorId: (id: number) => coreHttp.get<ResiduoResponse>(`/api/residuos/${id}`).then((r) => r.data),
   porStatus: (status: StatusResiduo) =>
     coreHttp.get<ResiduoResponse[]>("/api/residuos/status-residuo", { params: { status } }).then((r) => r.data),
-  porTipo: (tipoResiduo: string) =>
-    coreHttp.get<ResiduoResponse[]>(`/api/residuos/${encodeURIComponent(tipoResiduo)}/tipo`).then((r) => r.data),
+  porTipo: (tipo: TipoResiduo) =>
+    coreHttp.get<ResiduoResponse[]>(`/api/residuos/${tipo}/tipo`).then((r) => r.data),
   porPosicao: (posicaoId: number) =>
     coreHttp.get<ResiduoResponse[]>(`/api/residuos/${posicaoId}/posicao`).then((r) => r.data),
   cadastrar: (data: ResiduoRequest) =>

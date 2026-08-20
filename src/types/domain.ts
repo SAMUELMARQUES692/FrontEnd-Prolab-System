@@ -6,6 +6,13 @@ export type StatusPosicao = "DISPONIVEL" | "OCUPADA" | "INATIVA" | "RESERVADA";
 export type StatusResiduo = "ARMAZENADO" | "EM_TRATAMENTO" | "DESTRUIDO";
 export type TipoDeDestruicao = "PROCESSO_FISCAL" | "DESTRUICAO_DIRETA" | "LOGISTICA_REVERSA";
 export type TipoDocumento = "MTR" | "DECLARACAO" | "NOTA_FISCAL";
+export type EstadoFisico = "SOLIDO" | "LIQUIDO";
+export type TipoResiduo =
+  | "CODIGO_16_05_08"
+  | "CODIGO_15_02_02"
+  | "CODIGO_15_01_10"
+  | "CODIGO_20_01_35"
+  | "CODIGO_07_05_13";
 
 export interface ErrorResponse {
   code: string;
@@ -64,13 +71,14 @@ export interface AgendamentoResponse {
 }
 
 // ---------- Recebimento ----------
+// pesoConferido não é mais enviado no cadastro: o backend agora calcula esse
+// total a partir do peso dos Paletes vinculados (ver PaleteService#cadastrar).
 export interface RecebimentoRequest {
   agendamentoId: number;
   placaCaminhao: string;
   modeloCaminhao?: string | null;
   motoristaCaminhao: string;
   dataHoraRecebimento: string;
-  pesoConferido?: number | null;
   observacoes?: string | null;
 }
 export interface RecebimentoResponse {
@@ -85,19 +93,38 @@ export interface RecebimentoResponse {
   createdAt: string;
 }
 
-// ---------- Residuo ----------
-export interface ResiduoRequest {
+// ---------- Palete ----------
+// Novo desde a refatoração que tirou de Residuo a responsabilidade de
+// carregar tipo/peso — agora cada Palete representa um lote físico (com
+// ticket e número sequencial gerados pelo servidor) vinculado a um Recebimento.
+export interface PaleteRequest {
   recebimentoId: number;
-  tipoResiduo: string;
-  quantidade: number;
+  tipo: TipoResiduo;
+  peso: number;
+  estadoFisico: EstadoFisico;
+}
+export interface PaleteResponse {
+  id: number;
+  ticket: string;
+  recebimentoId: number;
+  numeroPalete: number;
+  tipo: TipoResiduo;
+  peso: number;
+  estadoFisico: EstadoFisico;
+  createdAt: string;
+}
+
+// ---------- Residuo ----------
+// Residuo agora só representa a alocação de um Palete numa posição de
+// estoque — tipo/peso/quantidade saíram daqui e vivem em Palete.
+export interface ResiduoRequest {
+  paleteId: number;
   posicaoId: number;
   mtrVinculado?: string | null;
 }
 export interface ResiduoResponse {
   id: number;
-  recebimentoId: number;
-  tipoResiduo: string;
-  quantidade: number;
+  paleteId: number;
   posicaoId: number;
   status: StatusResiduo;
   mtrVinculado: string | null;

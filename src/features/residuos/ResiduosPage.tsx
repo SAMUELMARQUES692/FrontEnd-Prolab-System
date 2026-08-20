@@ -8,7 +8,8 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { IconArrowUpRight, IconEdit, IconPlus, IconTrash } from "@/components/icons";
 import { useResiduosPorStatus, useAtualizarStatusResiduo, useDeletarResiduo } from "./useResiduos";
 import { ResiduoFormDrawer } from "./ResiduoFormDrawer";
-import { PROXIMO_STATUS_RESIDUO, STATUS_RESIDUO, entries } from "@/lib/enums";
+import { usePaletesLocais } from "@/features/paletes/usePaletes";
+import { PROXIMO_STATUS_RESIDUO, STATUS_RESIDUO, TIPO_RESIDUO, entries } from "@/lib/enums";
 import { formatDate, formatNumber } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -25,15 +26,28 @@ export function ResiduosPage() {
   const [editing, setEditing] = useState<ResiduoResponse | null>(null);
 
   const { data, isLoading } = useResiduosPorStatus(tab);
+  const { items: paletes } = usePaletesLocais();
   const avancarStatus = useAtualizarStatusResiduo();
   const deletar = useDeletarResiduo();
+
+  // Resíduo não carrega mais tipo/peso (isso ficou em Palete) — enriquecemos
+  // com o espelho local de paletes, quando disponível nesta máquina.
+  const paleteById = useMemo(() => new Map(paletes.map((p) => [p.id, p])), [paletes]);
 
   const filtered = useMemo(() => {
     if (!data) return [];
     const q = query.trim().toLowerCase();
     if (!q) return data;
-    return data.filter((r) => r.tipoResiduo.toLowerCase().includes(q) || (r.mtrVinculado ?? "").toLowerCase().includes(q));
-  }, [data, query]);
+    return data.filter((r) => {
+      const palete = paleteById.get(r.paleteId);
+      const tipoLabel = palete ? TIPO_RESIDUO[palete.tipo as keyof typeof TIPO_RESIDUO]?.label ?? palete.tipo : "";
+      return (
+        (palete?.ticket ?? "").toLowerCase().includes(q) ||
+        tipoLabel.toLowerCase().includes(q) ||
+        (r.mtrVinculado ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [data, query, paleteById]);
 
   const tabs: TabItem<StatusResiduo>[] = entries(STATUS_RESIDUO).map(([value, meta]) => ({
     value,
@@ -44,14 +58,27 @@ export function ResiduosPage() {
     {
       key: "tipo",
       header: "Resíduo",
-      render: (r) => (
-        <div>
-          <p className="font-medium">{r.tipoResiduo}</p>
-          <p className="text-xs text-muted">Recebimento #{r.recebimentoId} · Posição #{r.posicaoId}</p>
-        </div>
-      ),
+      render: (r) => {
+        const palete = paleteById.get(r.paleteId);
+        const tipoMeta = palete ? TIPO_RESIDUO[palete.tipo as keyof typeof TIPO_RESIDUO] : undefined;
+        return (
+          <div>
+            <p className="font-medium">{tipoMeta?.label ?? `Palete #${r.paleteId}`}</p>
+            <p className="text-xs text-muted">
+              {palete ? `${palete.ticket} · ` : ""}Posição #{r.posicaoId}
+            </p>
+          </div>
+        );
+      },
     },
-    { key: "quantidade", header: "Quantidade", render: (r) => formatNumber(r.quantidade, "kg") },
+    {
+      key: "peso",
+      header: "Peso",
+      render: (r) => {
+        const palete = paleteById.get(r.paleteId);
+        return palete ? formatNumber(palete.peso, "kg") : <span className="text-muted-2">—</span>;
+      },
+    },
     { key: "mtr", header: "MTR vinculado", render: (r) => <span className="text-muted">{r.mtrVinculado || "—"}</span> },
     {
       key: "destinacao",
@@ -76,7 +103,7 @@ export function ResiduosPage() {
                 onClick={async () => {
                   const ok = await confirmAction({
                     title: `Avançar status para "${STATUS_RESIDUO[proximo].label}"?`,
-                    description: `${r.tipoResiduo} sairá de "${STATUS_RESIDUO[r.status].label}" para "${STATUS_RESIDUO[proximo].label}". Essa transição não pode ser revertida pela API.`,
+                    description: `Resíduo #${r.id} sairá de "${STATUS_RESIDUO[r.status].label}" para "${STATUS_RESIDUO[proximo].label}". Essa transição não pode ser revertida pela API.`,
                     confirmLabel: "Avançar",
                   });
                   if (!ok) return;
@@ -139,7 +166,7 @@ export function ResiduosPage() {
       <PageHeader
         eyebrow="Estoque"
         title="Resíduos"
-        description="Itens armazenados, em tratamento ou já destinados — organizados pelo fluxo de status do backend."
+        description="Alocações de paletes em posições de estoque — organizadas pelo fluxo de status do backend."
         action={
           user?.isAdmin && (
             <Button
@@ -149,7 +176,7 @@ export function ResiduosPage() {
                 setFormOpen(true);
               }}
             >
-              Novo resíduo
+              Alocar resíduo
             </Button>
           )
         }
@@ -157,7 +184,7 @@ export function ResiduosPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Tabs items={tabs} value={tab} onChange={setTab} />
-        <SearchInput value={query} onChange={setQuery} placeholder="Buscar por tipo ou MTR..." className="max-w-xs" />
+        <SearchInput value={query} onChange={setQuery} placeholder="Buscar por ticket, tipo ou MTR..." className="max-w-xs" />
       </div>
 
       <Card>

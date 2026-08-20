@@ -17,7 +17,6 @@ const schema = z.object({
   modeloCaminhao: z.string().optional(),
   motoristaCaminhao: z.string().min(1, "Informe o motorista"),
   dataHoraRecebimento: z.string().min(1, "Informe a data e hora"),
-  pesoConferido: z.string().optional(),
   observacoes: z.string().optional(),
 });
 type FormValues = z.infer<typeof schema>;
@@ -57,7 +56,6 @@ export function RecebimentoFormDrawer({
         dataHoraRecebimento: recebimentoLocal
           ? toDateTimeLocalInput(recebimentoLocal.dataHoraRecebimento)
           : toDateTimeLocalInput(new Date().toISOString()),
-        pesoConferido: recebimentoLocal?.pesoConferido != null ? String(recebimentoLocal.pesoConferido) : "",
         observacoes: recebimentoLocal?.observacoes ?? "",
       });
     }
@@ -72,7 +70,6 @@ export function RecebimentoFormDrawer({
         modeloCaminhao: values.modeloCaminhao || null,
         motoristaCaminhao: values.motoristaCaminhao,
         dataHoraRecebimento: fromDateTimeLocalInput(values.dataHoraRecebimento),
-        pesoConferido: values.pesoConferido ? Number(values.pesoConferido) : null,
         observacoes: values.observacoes || null,
       };
       if (isEdit && recebimentoLocal) {
@@ -132,12 +129,15 @@ export function RecebimentoFormDrawer({
         <Field label="Data e hora do recebimento" htmlFor="dataHoraRecebimento" error={errors.dataHoraRecebimento?.message} required>
           <Input id="dataHoraRecebimento" type="datetime-local" {...register("dataHoraRecebimento")} />
         </Field>
-        <Field label="Peso conferido (kg)" htmlFor="pesoConferido" error={errors.pesoConferido?.message}>
-          <Input id="pesoConferido" type="number" step="0.01" min={0} placeholder="0,00" {...register("pesoConferido")} />
-        </Field>
         <Field label="Observações" htmlFor="observacoes" error={errors.observacoes?.message}>
           <Textarea id="observacoes" placeholder="Notas sobre o recebimento..." {...register("observacoes")} />
         </Field>
+        {!isEdit && (
+          <p className="text-xs leading-relaxed text-muted-2">
+            O peso conferido não é informado aqui — ele é somado automaticamente pelo servidor conforme os paletes
+            forem cadastrados na tela de Paletes.
+          </p>
+        )}
       </form>
     </Drawer>
   );

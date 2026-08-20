@@ -1,9 +1,11 @@
 import type {
+  EstadoFisico,
   StatusAgendamento,
   StatusPosicao,
   StatusResiduo,
   TipoDeDestruicao,
   TipoDocumento,
+  TipoResiduo,
 } from "@/types/domain";
 
 export type Tone = "neutral" | "accent" | "success" | "warning" | "danger" | "info";
@@ -45,6 +47,44 @@ export const TIPO_DOCUMENTO: Record<TipoDocumento, EnumMeta> = {
   NOTA_FISCAL: { label: "Nota fiscal", tone: "neutral" },
 };
 
+export const ESTADO_FISICO: Record<EstadoFisico, EnumMeta> = {
+  SOLIDO: { label: "Sólido", tone: "neutral" },
+  LIQUIDO: { label: "Líquido", tone: "info" },
+};
+
+interface TipoResiduoMeta extends EnumMeta {
+  codigo: string;
+}
+
+// Espelha o enum TipoResiduo do ProlabSystem — código MTR + descrição oficial.
+export const TIPO_RESIDUO: Record<TipoResiduo, TipoResiduoMeta> = {
+  CODIGO_16_05_08: {
+    codigo: "16 05 08",
+    label: "Produtos químicos orgânicos fora de uso com substâncias perigosas",
+    tone: "danger",
+  },
+  CODIGO_15_02_02: {
+    codigo: "15 02 02",
+    label: "Absorventes, materiais filtrantes, panos e vestuário contaminados",
+    tone: "warning",
+  },
+  CODIGO_15_01_10: {
+    codigo: "15 01 10",
+    label: "Embalagens contendo ou contaminadas por substâncias perigosas",
+    tone: "warning",
+  },
+  CODIGO_20_01_35: {
+    codigo: "20 01 35",
+    label: "Eletroeletrônicos fora de uso com componentes perigosos",
+    tone: "accent",
+  },
+  CODIGO_07_05_13: {
+    codigo: "07 05 13",
+    label: "Resíduos sólidos contendo substâncias perigosas",
+    tone: "danger",
+  },
+};
+
 // Ordem válida de transição de status do Resíduo (espelha ResiduoService#validarTransicao)
 export const PROXIMO_STATUS_RESIDUO: Record<StatusResiduo, StatusResiduo | null> = {
   ARMAZENADO: "EM_TRATAMENTO",
@@ -53,5 +93,5 @@ export const PROXIMO_STATUS_RESIDUO: Record<StatusResiduo, StatusResiduo | null>
 };
 
 export function entries<T extends Record<string, EnumMeta>>(rec: T) {
-  return Object.entries(rec) as [keyof T, EnumMeta][];
+  return Object.entries(rec) as [keyof T, T[keyof T]][];
 }
