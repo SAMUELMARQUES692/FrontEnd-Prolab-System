@@ -15,12 +15,6 @@ export function usePaletesLocais() {
   return { items, refresh };
 }
 
-export function usePaletesPorRecebimento(recebimentoId: number | undefined) {
-  const { items } = usePaletesLocais();
-  if (!recebimentoId) return [];
-  return items.filter((p) => p.recebimentoId === recebimentoId);
-}
-
 export function useCadastrarPalete() {
   const qc = useQueryClient();
   return useMutation({
