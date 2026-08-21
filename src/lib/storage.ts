@@ -25,6 +25,7 @@ export interface PaleteLocal {
   id: number;
   ticket: string;
   recebimentoId: number;
+  prime: string;
   numeroPalete: number;
   tipo: string;
   peso: number;

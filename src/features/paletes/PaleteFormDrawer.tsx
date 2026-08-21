@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { IconPalete } from "@/components/icons";
-import { useCadastrarPalete } from "./usePaletes";
+import { useCadastrarPalete, usePaletes } from "./usePaletes";
+import { useRecebimentos } from "@/features/recebimentos/useRecebimentos";
 import { getPaletesLocais, getRecebimentosLocais, type PaleteLocal } from "@/lib/storage";
 import { entries, ESTADO_FISICO, TIPO_RESIDUO } from "@/lib/enums";
 import { formatNumber } from "@/lib/format";
@@ -48,6 +49,8 @@ export function PaleteFormDrawer({
 }) {
   const toast = useToast();
   const cadastrar = useCadastrarPalete();
+  const { data: todosPaletes } = usePaletes();
+  const { data: todosRecebimentos } = useRecebimentos();
 
   const [recebimentoId, setRecebimentoId] = useState<number | null>(null);
   const [prime, setPrime] = useState<string | null>(null);
@@ -59,10 +62,35 @@ export function PaleteFormDrawer({
     defaultValues: { tipo: "CODIGO_16_05_08", estadoFisico: "SOLIDO" },
   });
 
+  // Prioriza os dados reais do servidor (listagem de paletes/recebimentos)
+  // para retomar uma sessão já iniciada em outro dispositivo/navegador; cai
+  // para o espelho local só quando ainda não temos esses dados carregados.
   const iniciarSessao = (id: number) => {
     setRecebimentoId(id);
-    setPrime(getRecebimentosLocais().find((r) => r.id === id)?.prime ?? null);
-    setSessao(getPaletesLocais().filter((p) => p.recebimentoId === id).sort((a, b) => a.numeroPalete - b.numeroPalete));
+    const recebimentoServidor = todosRecebimentos?.find((r) => r.id === id);
+    const paletesServidor = todosPaletes?.filter((p) => p.recebimentoId === id) ?? [];
+
+    if (recebimentoServidor || paletesServidor.length > 0) {
+      setPrime(recebimentoServidor?.prime ?? paletesServidor[0]?.prime ?? null);
+      setSessao(
+        [...paletesServidor]
+          .sort((a, b) => a.numeroPalete - b.numeroPalete)
+          .map((p) => ({
+            id: p.id,
+            ticket: p.ticket,
+            recebimentoId: p.recebimentoId,
+            prime: p.prime,
+            numeroPalete: p.numeroPalete,
+            tipo: p.tipo,
+            peso: p.peso,
+            estadoFisico: p.estadoFisico,
+            createdAt: p.createdAt,
+          }))
+      );
+    } else {
+      setPrime(getRecebimentosLocais().find((r) => r.id === id)?.prime ?? null);
+      setSessao(getPaletesLocais().filter((p) => p.recebimentoId === id).sort((a, b) => a.numeroPalete - b.numeroPalete));
+    }
   };
 
   useEffect(() => {
@@ -94,6 +122,7 @@ export function PaleteFormDrawer({
           id: res.id,
           ticket: res.ticket,
           recebimentoId: res.recebimentoId,
+          prime: res.prime,
           numeroPalete: res.numeroPalete,
           tipo: res.tipo,
           peso: res.peso,

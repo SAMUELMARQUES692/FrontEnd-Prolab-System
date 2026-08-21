@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { recebimentosApi } from "@/api/recebimentos";
 import {
   getRecebimentosLocais,
@@ -9,8 +9,23 @@ import {
 } from "@/lib/storage";
 import type { RecebimentoRequest } from "@/types/domain";
 
-// Não existe cache de servidor para listar (ver src/api/recebimentos.ts) —
-// este hook gerencia o histórico local em localStorage como estado React.
+const KEY = ["recebimentos"];
+
+// O backend agora expõe listagem completa de recebimentos.
+export function useRecebimentos() {
+  return useQuery({ queryKey: KEY, queryFn: recebimentosApi.listar });
+}
+
+// Busca um recebimento específico pelo código PRIME.
+export function useBuscarRecebimentoPorPrime(prime: string | null) {
+  return useQuery({
+    queryKey: [...KEY, "prime", prime],
+    queryFn: () => recebimentosApi.buscarPorPrime(prime as string),
+    enabled: !!prime,
+  });
+}
+
+// Mantido como espelho local extra (histórico "visto neste navegador").
 export function useRecebimentosLocais() {
   const [items, setItems] = useState<RecebimentoLocal[]>(() => getRecebimentosLocais());
 
@@ -41,11 +56,13 @@ export function useCadastrarRecebimento() {
         createdAt: res.createdAt,
       });
       qc.invalidateQueries({ queryKey: ["caminhoes"] });
+      qc.invalidateQueries({ queryKey: KEY });
     },
   });
 }
 
 export function useAtualizarRecebimento() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: RecebimentoRequest }) => recebimentosApi.atualizar(id, data),
     onSuccess: (res) => {
@@ -60,13 +77,18 @@ export function useAtualizarRecebimento() {
         observacoes: res.observacoes,
         createdAt: res.createdAt,
       });
+      qc.invalidateQueries({ queryKey: KEY });
     },
   });
 }
 
 export function useDeletarRecebimento() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => recebimentosApi.deletar(id),
-    onSuccess: (_res, id) => removeRecebimentoLocal(id),
+    onSuccess: (_res, id) => {
+      removeRecebimentoLocal(id);
+      qc.invalidateQueries({ queryKey: KEY });
+    },
   });
 }

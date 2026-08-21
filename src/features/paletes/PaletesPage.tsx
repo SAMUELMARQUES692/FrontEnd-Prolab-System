@@ -1,28 +1,40 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { DataTable, type Column } from "@/components/ui/DataTable";
+import { SearchInput } from "@/components/ui/SearchInput";
 import { Badge } from "@/components/ui/Badge";
 import { Button, IconButton } from "@/components/ui/Button";
 import { CopyableCode } from "@/components/ui/CopyableCode";
-import { IconAlert, IconArrowUpRight, IconPlus } from "@/components/icons";
-import { usePaletesLocais } from "./usePaletes";
+import { IconArrowUpRight, IconPlus } from "@/components/icons";
+import { usePaletes } from "./usePaletes";
 import { PaleteFormDrawer } from "./PaleteFormDrawer";
 import { ResiduoFormDrawer } from "@/features/residuos/ResiduoFormDrawer";
 import { TIPO_RESIDUO, ESTADO_FISICO } from "@/lib/enums";
 import { formatDateTime, formatNumber } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
-import type { PaleteLocal } from "@/lib/storage";
+import type { PaleteResponse } from "@/types/domain";
 
 export function PaletesPage() {
   const { user } = useAuth();
-  const { items, refresh } = usePaletesLocais();
+  const { data, isLoading, refetch } = usePaletes();
 
+  const [query, setQuery] = useState("");
   const [formOpen, setFormOpen] = useState(false);
-  const [alocando, setAlocando] = useState<PaleteLocal | null>(null);
+  const [alocando, setAlocando] = useState<PaleteResponse | null>(null);
 
-  const columns: Column<PaleteLocal>[] = [
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    const q = query.trim().toLowerCase();
+    if (!q) return [...data].sort((a, b) => b.id - a.id);
+    return data
+      .filter((p) => p.ticket.toLowerCase().includes(q) || p.prime.toLowerCase().includes(q))
+      .sort((a, b) => b.id - a.id);
+  }, [data, query]);
+
+  const columns: Column<PaleteResponse>[] = [
     { key: "ticket", header: "Ticket", render: (p) => <CopyableCode value={p.ticket} /> },
+    { key: "prime", header: "PRIME", render: (p) => <CopyableCode value={p.prime} /> },
     { key: "recebimento", header: "Recebimento", render: (p) => <span className="text-muted">#{p.recebimentoId}</span> },
     { key: "numero", header: "Nº do palete", render: (p) => p.numeroPalete },
     {
@@ -87,22 +99,21 @@ export function PaletesPage() {
         }
       />
 
-      <div className="flex items-start gap-2.5 rounded-lg border border-info/30 bg-info-soft px-4 py-3.5 text-xs leading-relaxed text-info">
-        <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
-        <p>
-          O ProlabSystem não expõe endpoint de listagem para paletes (só criação). Por isso este histórico é mantido
-          localmente, neste navegador. Depois de cadastrar um palete, use <strong>"Alocar em posição de estoque"</strong>{" "}
-          para registrar o resíduo correspondente.
-        </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchInput value={query} onChange={setQuery} placeholder="Buscar por ticket ou PRIME..." className="max-w-xs" />
+        <span className="text-xs text-muted-2">
+          {filtered.length} de {data?.length ?? 0} palete(s)
+        </span>
       </div>
 
       <Card>
         <DataTable
           columns={columns}
-          data={items}
+          data={filtered}
+          loading={isLoading}
           rowKey={(p) => p.id}
-          emptyTitle="Nenhum palete nesta máquina ainda"
-          emptyDescription="Cadastre um palete vinculado a um recebimento para vê-lo aparecer aqui."
+          emptyTitle="Nenhum palete encontrado"
+          emptyDescription="Ajuste a busca ou cadastre um palete vinculado a um recebimento para vê-lo aparecer aqui."
         />
       </Card>
 
@@ -110,7 +121,7 @@ export function PaletesPage() {
         open={formOpen}
         onClose={() => {
           setFormOpen(false);
-          refresh();
+          refetch();
         }}
       />
 

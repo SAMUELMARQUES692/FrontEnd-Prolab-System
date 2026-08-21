@@ -107,6 +107,7 @@ export interface PaleteResponse {
   id: number;
   ticket: string;
   recebimentoId: number;
+  prime: string;
   numeroPalete: number;
   tipo: TipoResiduo;
   peso: number;

@@ -7,10 +7,11 @@ import { Field } from "@/components/ui/Field";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useAtualizarRecebimento, useCadastrarRecebimento } from "./useRecebimentos";
+import { useCaminhoes } from "@/features/caminhoes/useCaminhoes";
 import { fromDateTimeLocalInput, toDateTimeLocalInput } from "@/lib/format";
 import { useToast } from "@/context/ToastContext";
 import { toApiError } from "@/api/http";
-import type { RecebimentoLocal } from "@/lib/storage";
+import type { RecebimentoResponse } from "@/types/domain";
 
 const schema = z.object({
   placaCaminhao: z.string().min(1, "Informe a placa"),
@@ -26,19 +27,21 @@ export function RecebimentoFormDrawer({
   onClose,
   agendamentoId: agendamentoIdProp,
   agendamentoLabel,
-  recebimentoLocal,
+  recebimento,
 }: {
   open: boolean;
   onClose: () => void;
   agendamentoId?: number | null;
   agendamentoLabel?: string;
-  recebimentoLocal?: RecebimentoLocal | null;
+  recebimento?: RecebimentoResponse | null;
 }) {
   const toast = useToast();
   const cadastrar = useCadastrarRecebimento();
   const atualizar = useAtualizarRecebimento();
-  const isEdit = !!recebimentoLocal;
-  const agendamentoId = agendamentoIdProp ?? recebimentoLocal?.agendamentoId;
+  const { data: caminhoes } = useCaminhoes();
+  const isEdit = !!recebimento;
+  const agendamentoId = agendamentoIdProp ?? recebimento?.agendamentoId;
+  const caminhaoAtual = recebimento ? caminhoes?.find((c) => c.id === recebimento.caminhaoId) : undefined;
 
   const {
     register,
@@ -50,16 +53,16 @@ export function RecebimentoFormDrawer({
   useEffect(() => {
     if (open) {
       reset({
-        placaCaminhao: "",
-        modeloCaminhao: "",
-        motoristaCaminhao: "",
-        dataHoraRecebimento: recebimentoLocal
-          ? toDateTimeLocalInput(recebimentoLocal.dataHoraRecebimento)
+        placaCaminhao: caminhaoAtual?.placa ?? "",
+        modeloCaminhao: caminhaoAtual?.modelo ?? "",
+        motoristaCaminhao: caminhaoAtual?.motorista ?? "",
+        dataHoraRecebimento: recebimento
+          ? toDateTimeLocalInput(recebimento.dataHoraRecebimento)
           : toDateTimeLocalInput(new Date().toISOString()),
-        observacoes: recebimentoLocal?.observacoes ?? "",
+        observacoes: recebimento?.observacoes ?? "",
       });
     }
-  }, [open, recebimentoLocal, reset]);
+  }, [open, recebimento, caminhaoAtual, reset]);
 
   const onSubmit = async (values: FormValues) => {
     if (!agendamentoId) return;
@@ -72,8 +75,8 @@ export function RecebimentoFormDrawer({
         dataHoraRecebimento: fromDateTimeLocalInput(values.dataHoraRecebimento),
         observacoes: values.observacoes || null,
       };
-      if (isEdit && recebimentoLocal) {
-        await atualizar.mutateAsync({ id: recebimentoLocal.id, data: payload });
+      if (isEdit && recebimento) {
+        await atualizar.mutateAsync({ id: recebimento.id, data: payload });
         toast.success("Recebimento atualizado");
       } else {
         const res = await cadastrar.mutateAsync(payload);
@@ -92,7 +95,7 @@ export function RecebimentoFormDrawer({
       title={isEdit ? "Editar recebimento" : "Registrar recebimento"}
       subtitle={
         isEdit
-          ? `Recebimento #${recebimentoLocal?.id} · a API não permite recuperar os valores atuais — preencha novamente`
+          ? `Recebimento #${recebimento?.id} · ${recebimento?.prime}`
           : agendamentoLabel
           ? `${agendamentoLabel} · agendamento #${agendamentoId}`
           : agendamentoId
@@ -111,10 +114,11 @@ export function RecebimentoFormDrawer({
       }
     >
       <form id="recebimento-form" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-        {isEdit && (
+        {isEdit && !caminhaoAtual && (
           <div className="rounded-md border border-warning/30 bg-warning-soft px-3.5 py-3 text-xs leading-relaxed text-warning">
-            O ProlabSystem não expõe um endpoint para consultar um recebimento existente — apenas criar, atualizar e
-            excluir. Ao salvar, todos os campos abaixo substituem os valores atuais no servidor.
+            Não foi possível localizar o caminhão vinculado a este recebimento na listagem atual — confira placa,
+            modelo e motorista antes de salvar. Ao salvar, todos os campos abaixo substituem os valores atuais no
+            servidor.
           </div>
         )}
         <Field label="Placa do caminhão" htmlFor="placaCaminhao" error={errors.placaCaminhao?.message} required>

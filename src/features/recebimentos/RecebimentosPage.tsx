@@ -5,9 +5,10 @@ import { DataTable, type Column } from "@/components/ui/DataTable";
 import { IconButton } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { SearchInput } from "@/components/ui/SearchInput";
 import { CopyableCode } from "@/components/ui/CopyableCode";
-import { IconAlert, IconEdit, IconPalete, IconRecebimento, IconTrash } from "@/components/icons";
-import { useRecebimentosLocais, useDeletarRecebimento } from "./useRecebimentos";
+import { IconEdit, IconPalete, IconRecebimento, IconTrash } from "@/components/icons";
+import { useRecebimentos, useDeletarRecebimento } from "./useRecebimentos";
 import { RecebimentoFormDrawer } from "./RecebimentoFormDrawer";
 import { PaleteFormDrawer } from "@/features/paletes/PaleteFormDrawer";
 import { useClientes } from "@/features/clientes/useClientes";
@@ -17,18 +18,19 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { confirmAction } from "@/components/ui/ConfirmDialog";
 import { toApiError } from "@/api/http";
-import type { RecebimentoLocal } from "@/lib/storage";
+import type { RecebimentoResponse } from "@/types/domain";
 
 export function RecebimentosPage() {
   const { user } = useAuth();
   const toast = useToast();
-  const { items, refresh } = useRecebimentosLocais();
+  const { data, isLoading, refetch } = useRecebimentos();
   const { data: clientes } = useClientes();
   const { data: caminhoes } = useCaminhoes();
   const deletar = useDeletarRecebimento();
 
+  const [query, setQuery] = useState("");
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<RecebimentoLocal | null>(null);
+  const [editing, setEditing] = useState<RecebimentoResponse | null>(null);
   const [manualId, setManualId] = useState("");
   const [paleteRecebimentoId, setPaleteRecebimentoId] = useState<number | null>(null);
 
@@ -42,7 +44,17 @@ export function RecebimentosPage() {
     return (id: number) => map.get(id) ?? `#${id}`;
   }, [caminhoes]);
 
-  const columns: Column<RecebimentoLocal>[] = [
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    const q = query.trim().toLowerCase();
+    const sorted = [...data].sort((a, b) => b.id - a.id);
+    if (!q) return sorted;
+    return sorted.filter(
+      (r) => r.prime.toLowerCase().includes(q) || caminhaoPlaca(r.caminhaoId).toLowerCase().includes(q)
+    );
+  }, [data, query, caminhaoPlaca]);
+
+  const columns: Column<RecebimentoResponse>[] = [
     { key: "prime", header: "PRIME", render: (r) => <CopyableCode value={r.prime} /> },
     { key: "cliente", header: "Cliente", render: (r) => clienteNome(r.clienteId) },
     { key: "caminhao", header: "Caminhão", render: (r) => <span className="font-mono">{caminhaoPlaca(r.caminhaoId)}</span> },
@@ -91,7 +103,6 @@ export function RecebimentosPage() {
                 try {
                   await deletar.mutateAsync(r.id);
                   toast.success("Recebimento excluído");
-                  refresh();
                 } catch (err) {
                   toast.error("Não foi possível excluir", toApiError(err).message);
                 }
@@ -112,13 +123,11 @@ export function RecebimentosPage() {
         description="Registro da chegada da carga: caminhão, peso conferido e geração do código PRIME."
       />
 
-      <div className="flex items-start gap-2.5 rounded-lg border border-info/30 bg-info-soft px-4 py-3.5 text-xs leading-relaxed text-info">
-        <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
-        <p>
-          O ProlabSystem não expõe endpoint de listagem para recebimentos (só criação/edição/exclusão). Por isso este
-          histórico é mantido localmente, neste navegador. Para registrar um novo recebimento, use o botão{" "}
-          <strong>"Registrar recebimento"</strong> na tela de Agendamentos — ou informe um ID de agendamento abaixo.
-        </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchInput value={query} onChange={setQuery} placeholder="Buscar por PRIME ou placa..." className="max-w-xs" />
+        <span className="text-xs text-muted-2">
+          {filtered.length} de {data?.length ?? 0} recebimento(s)
+        </span>
       </div>
 
       {user?.isAdmin && (
@@ -151,10 +160,11 @@ export function RecebimentosPage() {
       <Card>
         <DataTable
           columns={columns}
-          data={items}
+          data={filtered}
+          loading={isLoading}
           rowKey={(r) => r.id}
-          emptyTitle="Nenhum recebimento nesta máquina ainda"
-          emptyDescription="Registre um recebimento a partir de um agendamento confirmado para vê-lo aparecer aqui."
+          emptyTitle="Nenhum recebimento encontrado"
+          emptyDescription="Ajuste a busca ou registre um recebimento a partir de um agendamento confirmado para vê-lo aparecer aqui."
         />
       </Card>
 
@@ -162,17 +172,17 @@ export function RecebimentosPage() {
         open={formOpen}
         onClose={() => {
           setFormOpen(false);
-          refresh();
+          refetch();
         }}
         agendamentoId={editing ? undefined : manualId ? Number(manualId) : undefined}
-        recebimentoLocal={editing}
+        recebimento={editing}
       />
 
       <PaleteFormDrawer
         open={paleteRecebimentoId !== null}
         onClose={() => {
           setPaleteRecebimentoId(null);
-          refresh();
+          refetch();
         }}
         defaultRecebimentoId={paleteRecebimentoId ?? undefined}
       />
