@@ -146,6 +146,7 @@ export function PaletesGroupedTable({
                                     <th className="px-4 py-2 text-[10px] font-medium uppercase tracking-wide text-muted-2">Tipo de resíduo</th>
                                     <th className="px-4 py-2 text-[10px] font-medium uppercase tracking-wide text-muted-2">Peso</th>
                                     <th className="px-4 py-2 text-[10px] font-medium uppercase tracking-wide text-muted-2">Estado físico</th>
+                                    <th className="px-4 py-2 text-[10px] font-medium uppercase tracking-wide text-muted-2">Situação</th>
                                     <th className="px-4 py-2 text-[10px] font-medium uppercase tracking-wide text-muted-2">Criado em</th>
                                     {isAdmin && <th className="px-4 py-2 text-right text-[10px] font-medium uppercase tracking-wide text-muted-2" />}
                                   </tr>
@@ -178,18 +179,25 @@ export function PaletesGroupedTable({
                                             <span className="text-muted">{p.estadoFisico}</span>
                                           )}
                                         </td>
+                                        <td className="px-4 py-2.5">
+                                          <Badge tone={p.armazenado ? "info" : "success"}>
+                                            {p.armazenado ? "Armazenado" : "Disponível"}
+                                          </Badge>
+                                        </td>
                                         <td className="px-4 py-2.5 text-muted">{formatDateTime(p.createdAt)}</td>
                                         {isAdmin && (
                                           <td className="px-4 py-2.5 text-right">
-                                            <IconButton
-                                              aria-label="Alocar em posição de estoque"
-                                              variant="ghost"
-                                              size="sm"
-                                              title="Alocar em posição de estoque"
-                                              onClick={() => onAlocar(p)}
-                                            >
-                                              <IconArrowUpRight className="h-4 w-4" />
-                                            </IconButton>
+                                            {!p.armazenado && (
+                                              <IconButton
+                                                aria-label="Alocar em posição de estoque"
+                                                variant="ghost"
+                                                size="sm"
+                                                title="Alocar em posição de estoque"
+                                                onClick={() => onAlocar(p)}
+                                              >
+                                                <IconArrowUpRight className="h-4 w-4" />
+                                              </IconButton>
+                                            )}
                                           </td>
                                         )}
                                       </tr>

@@ -112,6 +112,7 @@ export interface PaleteResponse {
   tipo: TipoResiduo;
   peso: number;
   estadoFisico: EstadoFisico;
+  armazenado: boolean;
   createdAt: string;
 }
 

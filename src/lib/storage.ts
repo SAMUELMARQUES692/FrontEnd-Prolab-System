@@ -30,6 +30,7 @@ export interface PaleteLocal {
   tipo: string;
   peso: number;
   estadoFisico: string;
+  armazenado: boolean;
   createdAt: string;
 }
 

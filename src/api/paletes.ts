@@ -8,5 +8,5 @@ export const paletesApi = {
   cadastrar: (data: PaleteRequest) => coreHttp.post<PaleteResponse>("/api/paletes", data).then((r) => r.data),
   listar: () => coreHttp.get<PaleteResponse[]>("/api/paletes").then((r) => r.data),
   buscarPorPrime: (prime: string) =>
-    coreHttp.get<PaleteResponse[]>(`/api/paletes/${encodeURIComponent(prime)}`).then((r) => r.data),
+    coreHttp.get<PaleteResponse[]>(`/api/paletes/${encodeURIComponent(prime)}/prime`).then((r) => r.data),
 };

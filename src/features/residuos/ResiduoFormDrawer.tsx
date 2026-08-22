@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,7 +8,7 @@ import { Input, Select } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useCadastrarResiduo, useAtualizarResiduo } from "./useResiduos";
 import { usePosicoes } from "@/features/posicoes/usePosicoes";
-import { usePaletesLocais } from "@/features/paletes/usePaletes";
+import { usePaletes } from "@/features/paletes/usePaletes";
 import { TIPO_RESIDUO } from "@/lib/enums";
 import { formatNumber } from "@/lib/format";
 import { useToast } from "@/context/ToastContext";
@@ -36,10 +36,17 @@ export function ResiduoFormDrawer({
 }) {
   const toast = useToast();
   const { data: posicoes } = usePosicoes();
-  const { items: paletes } = usePaletesLocais();
+  const { data: todosPaletes } = usePaletes();
   const cadastrar = useCadastrarResiduo();
   const atualizar = useAtualizarResiduo();
   const isEdit = !!residuo;
+
+  // Só paletes ainda não armazenados podem ser alocados; ao editar, o palete
+  // já vinculado a este resíduo continua na lista mesmo estando armazenado.
+  const paletes = useMemo(
+    () => (todosPaletes ?? []).filter((p) => !p.armazenado || p.id === residuo?.paleteId),
+    [todosPaletes, residuo]
+  );
 
   const {
     register,
@@ -78,7 +85,7 @@ export function ResiduoFormDrawer({
     }
   };
 
-  const editingPaleteNaoListado = isEdit && residuo && !paletes.some((p) => p.id === residuo.paleteId);
+  const editingPaleteNaoListado = isEdit && residuo && !!todosPaletes && !todosPaletes.some((p) => p.id === residuo.paleteId);
 
   return (
     <Drawer
@@ -102,16 +109,14 @@ export function ResiduoFormDrawer({
           label="Palete"
           htmlFor="paleteId"
           error={errors.paleteId?.message}
-          hint={paletes.length === 0 ? "Nenhum palete cadastrado nesta máquina — cadastre um na tela de Paletes" : undefined}
+          hint={paletes.length === 0 ? "Nenhum palete disponível para alocação — cadastre um na tela de Paletes" : undefined}
           required
         >
           <Select id="paleteId" defaultValue="" {...register("paleteId")}>
             <option value="" disabled>
               Selecione o palete
             </option>
-            {editingPaleteNaoListado && (
-              <option value={residuo!.paleteId}>Palete #{residuo!.paleteId} (não listado nesta máquina)</option>
-            )}
+            {editingPaleteNaoListado && <option value={residuo!.paleteId}>Palete #{residuo!.paleteId}</option>}
             {paletes.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.ticket} · {TIPO_RESIDUO[p.tipo as keyof typeof TIPO_RESIDUO]?.codigo ?? p.tipo} ·{" "}

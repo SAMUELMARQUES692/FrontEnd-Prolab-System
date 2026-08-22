@@ -44,6 +44,7 @@ export function useCadastrarPalete() {
         tipo: res.tipo,
         peso: res.peso,
         estadoFisico: res.estadoFisico,
+        armazenado: res.armazenado,
         createdAt: res.createdAt,
       });
       // O servidor soma o peso do palete ao pesoConferido do recebimento —

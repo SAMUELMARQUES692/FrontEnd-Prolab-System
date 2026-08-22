@@ -21,6 +21,8 @@ export function useResiduosPorCodigoPosicao(codigo: string | null) {
 function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ["residuos"] });
   qc.invalidateQueries({ queryKey: ["posicoes"] });
+  // alocar/editar/excluir um resíduo muda o "armazenado" do palete vinculado.
+  qc.invalidateQueries({ queryKey: ["paletes"] });
 }
 
 export function useCadastrarResiduo() {

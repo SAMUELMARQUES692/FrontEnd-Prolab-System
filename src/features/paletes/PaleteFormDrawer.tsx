@@ -84,6 +84,7 @@ export function PaleteFormDrawer({
             tipo: p.tipo,
             peso: p.peso,
             estadoFisico: p.estadoFisico,
+            armazenado: p.armazenado,
             createdAt: p.createdAt,
           }))
       );
@@ -127,6 +128,7 @@ export function PaleteFormDrawer({
           tipo: res.tipo,
           peso: res.peso,
           estadoFisico: res.estadoFisico,
+          armazenado: res.armazenado,
           createdAt: res.createdAt,
         },
       ]);
