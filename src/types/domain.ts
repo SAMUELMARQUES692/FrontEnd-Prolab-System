@@ -126,6 +126,8 @@ export interface ResiduoRequest {
 export interface ResiduoResponse {
   id: number;
   paleteId: number;
+  ticket: string;
+  prime: string;
   posicaoId: number;
   status: StatusResiduo;
   mtrVinculado: string | null;

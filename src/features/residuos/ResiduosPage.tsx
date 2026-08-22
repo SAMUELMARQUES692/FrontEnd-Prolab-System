@@ -6,9 +6,10 @@ import { Button, IconButton } from "@/components/ui/Button";
 import { Tabs, type TabItem } from "@/components/ui/Tabs";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { IconArrowUpRight, IconEdit, IconPlus, IconTrash } from "@/components/icons";
-import { useResiduosPorStatus, useAtualizarStatusResiduo, useDeletarResiduo } from "./useResiduos";
+import { useResiduosPorStatus, useResiduosPorCodigoPosicao, useAtualizarStatusResiduo, useDeletarResiduo } from "./useResiduos";
 import { ResiduoFormDrawer } from "./ResiduoFormDrawer";
 import { usePaletesLocais } from "@/features/paletes/usePaletes";
+import { usePosicoes } from "@/features/posicoes/usePosicoes";
 import { PROXIMO_STATUS_RESIDUO, STATUS_RESIDUO, TIPO_RESIDUO, entries } from "@/lib/enums";
 import { formatDate, formatNumber } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
@@ -22,17 +23,30 @@ export function ResiduosPage() {
   const toast = useToast();
   const [tab, setTab] = useState<StatusResiduo>("ARMAZENADO");
   const [query, setQuery] = useState("");
+  const [posicaoCodigo, setPosicaoCodigo] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ResiduoResponse | null>(null);
 
-  const { data, isLoading } = useResiduosPorStatus(tab);
+  const buscandoPorPosicao = posicaoCodigo.trim().length > 0;
+  const { data: porStatus, isLoading: loadingStatus } = useResiduosPorStatus(tab, !buscandoPorPosicao);
+  const {
+    data: porPosicao,
+    isLoading: loadingPosicao,
+    error: erroPosicao,
+  } = useResiduosPorCodigoPosicao(buscandoPorPosicao ? posicaoCodigo.trim() : null);
+  const data = buscandoPorPosicao ? porPosicao : porStatus;
+  const isLoading = buscandoPorPosicao ? loadingPosicao : loadingStatus;
+
   const { items: paletes } = usePaletesLocais();
+  const { data: posicoes } = usePosicoes();
   const avancarStatus = useAtualizarStatusResiduo();
   const deletar = useDeletarResiduo();
 
-  // Resíduo não carrega mais tipo/peso (isso ficou em Palete) — enriquecemos
-  // com o espelho local de paletes, quando disponível nesta máquina.
+  // Resíduo não carrega tipo/peso (isso ficou em Palete) — enriquecemos com o
+  // espelho local de paletes, quando disponível nesta máquina. Ticket e PRIME
+  // já vêm prontos na própria response do resíduo.
   const paleteById = useMemo(() => new Map(paletes.map((p) => [p.id, p])), [paletes]);
+  const posicaoById = useMemo(() => new Map((posicoes ?? []).map((p) => [p.id, p])), [posicoes]);
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -42,7 +56,8 @@ export function ResiduosPage() {
       const palete = paleteById.get(r.paleteId);
       const tipoLabel = palete ? TIPO_RESIDUO[palete.tipo as keyof typeof TIPO_RESIDUO]?.label ?? palete.tipo : "";
       return (
-        (palete?.ticket ?? "").toLowerCase().includes(q) ||
+        r.ticket.toLowerCase().includes(q) ||
+        r.prime.toLowerCase().includes(q) ||
         tipoLabel.toLowerCase().includes(q) ||
         (r.mtrVinculado ?? "").toLowerCase().includes(q)
       );
@@ -61,11 +76,12 @@ export function ResiduosPage() {
       render: (r) => {
         const palete = paleteById.get(r.paleteId);
         const tipoMeta = palete ? TIPO_RESIDUO[palete.tipo as keyof typeof TIPO_RESIDUO] : undefined;
+        const codigoPosicao = posicaoById.get(r.posicaoId)?.codigo ?? `#${r.posicaoId}`;
         return (
           <div>
             <p className="font-medium">{tipoMeta?.label ?? `Palete #${r.paleteId}`}</p>
             <p className="text-xs text-muted">
-              {palete ? `${palete.ticket} · ` : ""}Posição #{r.posicaoId}
+              {r.ticket} · PRIME {r.prime} · Posição {codigoPosicao}
             </p>
           </div>
         );
@@ -183,8 +199,18 @@ export function ResiduosPage() {
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Tabs items={tabs} value={tab} onChange={setTab} />
-        <SearchInput value={query} onChange={setQuery} placeholder="Buscar por ticket, tipo ou MTR..." className="max-w-xs" />
+        <div className={buscandoPorPosicao ? "pointer-events-none opacity-50" : ""}>
+          <Tabs items={tabs} value={tab} onChange={setTab} />
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <SearchInput
+            value={posicaoCodigo}
+            onChange={setPosicaoCodigo}
+            placeholder="Buscar por código da posição..."
+            className="max-w-[220px] uppercase"
+          />
+          <SearchInput value={query} onChange={setQuery} placeholder="Buscar por ticket, PRIME, tipo ou MTR..." className="max-w-xs" />
+        </div>
       </div>
 
       <Card>
@@ -193,8 +219,16 @@ export function ResiduosPage() {
           data={filtered}
           loading={isLoading}
           rowKey={(r) => r.id}
-          emptyTitle={`Nenhum resíduo com status "${STATUS_RESIDUO[tab].label}"`}
-          emptyDescription="Troque de aba ou cadastre um novo resíduo."
+          emptyTitle={
+            buscandoPorPosicao
+              ? erroPosicao
+                ? `Posição "${posicaoCodigo}" não encontrada`
+                : `Nenhum resíduo na posição "${posicaoCodigo}"`
+              : `Nenhum resíduo com status "${STATUS_RESIDUO[tab].label}"`
+          }
+          emptyDescription={
+            buscandoPorPosicao ? "Confira o código digitado." : "Troque de aba ou cadastre um novo resíduo."
+          }
         />
       </Card>
 

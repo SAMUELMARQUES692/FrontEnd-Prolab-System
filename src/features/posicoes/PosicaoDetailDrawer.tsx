@@ -75,6 +75,9 @@ export function PosicaoDetailDrawer({
                         <Badge tone={STATUS_RESIDUO[r.status].tone}>{STATUS_RESIDUO[r.status].label}</Badge>
                       </div>
                       <p className="mt-1.5 text-xs text-muted">
+                        {r.ticket} · PRIME {r.prime}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted">
                         {palete ? formatNumber(palete.peso, "kg") : "Peso indisponível — palete não listado nesta máquina"}
                       </p>
                     </li>
